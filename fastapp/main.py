@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from db import database
 from fastapi.security import OAuth2PasswordBearer
 from routers.user_auth import users_router as user_router
-from exceptions.request_errors import UserAlreadyExists
+from exceptions.request_errors import UserAlreadyExists,InvalidCredentials
 import requests
 
 app = FastAPI()
@@ -14,6 +14,13 @@ app.include_router(user_router, prefix="/api/v1")
 async def unicorn_exception_handler(request: Request, exc: UserAlreadyExists):
     return JSONResponse(
         status_code=400,
+        content={"message": f"{exc.message}"},
+    )
+
+@app.exception_handler(InvalidCredentials)
+async def invalid_credentials_handler(request: Request, exc: InvalidCredentials):
+    return JSONResponse(
+        status_code=401,
         content={"message": f"{exc.message}"},
     )
 
