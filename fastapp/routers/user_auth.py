@@ -5,13 +5,11 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm,HTT
 from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta, timezone
 from auth import verify_token, create_access_token
-from dependencies import AccessTokenBearer,TokenBearer, RefreshTokenBearer
-from exceptions.request_errors import UserAlreadyExists
+from dependencies import AccessTokenBearer,TokenBearer, RefreshTokenBearer,get_current_user,RoleChecker
+from exceptions.request_errors import UserAlreadyExists,RefreshTokenExpired, InvalidCredentials
 # Dependency to get the MongoDB collection
 
 REFRESH_TOKEN_EXPIRY = 2
-
-access_token_bearer = AccessTokenBearer()
 
 def get_collection():
     return database['users'] 
@@ -27,7 +25,7 @@ users_router = APIRouter()
 async def signup_user(user: User, collection=Depends(get_collection)):
     existing_user = await collection.find_one({"email": user.email})
     if existing_user:
-        raise UserAlreadyExists()
+        raise UserAlreadyExists
         
         #raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -43,6 +41,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     user = await collection.find_one({"email": form_data.username, "password": form_data.password})
     print(user)
     if not user:
+        raise InvalidCredentials
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     # Update last_login field with current datetime
     await collection.update_one(
@@ -83,36 +82,23 @@ async def refresh_access_token(token_details: str = Depends(RefreshTokenBearer()
 
         return JSONResponse(content={"access_token": new_access_token})
 
-    raise Exception("Refresh token expired")
+    raise RefreshTokenExpired
 
 from fastapi import Security
 
-async def get_current_user(token: str = Depends(access_token_bearer), collection=Depends(get_collection)):
-    # return  "user logged hey in"
-    print("user details fetched",token)
-    
-    # payload = verify_token(token)
-    # print(payload,"payload")
-    if token is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
-    user = await collection.find_one({"email": token.get("user", {}).get("email")})
-    print(user,"user")
-    
-    if user:
-        return{
-            "id":str(user['_id']),
-            "name":user['name'],
-            "email":user['email'],
-            "role":user['role']
 
-        }
+class RoleChecker:
+    def __init__(self, allowed_roles: list):
+        self.allowed_roles = allowed_roles
 
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-   
+    def __call__(self, current_user: dict = Depends(get_current_user)):
+        if current_user.get("role") not in self.allowed_roles:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        return current_user
+
 
 @users_router.get("/users/me")
-async def read_users_me(current_user: dict = Depends(get_current_user)):
+async def read_users_me(current_user: dict = Depends(get_current_user),role_checker: str = Depends(RoleChecker(allowed_roles=["user", "admin"]))):
     return current_user
 
 @users_router.get("/admin")
