@@ -5,14 +5,19 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm,HTT
 from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta, timezone
 from auth import verify_token, create_access_token
+from books.schemas import BookCreateModel
 from dependencies import AccessTokenBearer,TokenBearer, RefreshTokenBearer,get_current_user,RoleChecker
 from exceptions.request_errors import UserAlreadyExists,RefreshTokenExpired, InvalidCredentials
+from .user_service import userService
 # Dependency to get the MongoDB collection
 
 REFRESH_TOKEN_EXPIRY = 2
 
 def get_collection():
     return database['users'] 
+
+def get_books_collection():
+    return database['books']
 
 class User(BaseModel):
     name: str
@@ -48,7 +53,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         {"_id": user["_id"]},
         {"$set": {"last_login": datetime.utcnow()}}
     )
-
+  
     access_token = create_access_token(
                 user_data={
                     "email": user['email'],
@@ -86,17 +91,6 @@ async def refresh_access_token(token_details: str = Depends(RefreshTokenBearer()
 
 from fastapi import Security
 
-
-class RoleChecker:
-    def __init__(self, allowed_roles: list):
-        self.allowed_roles = allowed_roles
-
-    def __call__(self, current_user: dict = Depends(get_current_user)):
-        if current_user.get("role") not in self.allowed_roles:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
-        return current_user
-
-
 @users_router.get("/users/me")
 async def read_users_me(current_user: dict = Depends(get_current_user),role_checker: str = Depends(RoleChecker(allowed_roles=["user", "admin"]))):
     return current_user
@@ -106,3 +100,25 @@ async def read_admin_data(current_user: dict = Security(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return {"admin_data": "This is sensitive admin data"}
+
+
+@users_router.post("/createBook")
+async def create_book(bookdata:BookCreateModel,books_collection=Depends(get_books_collection),users_collection=Depends(get_collection),current_user: dict = Depends(get_current_user)):
+    bookrecord=bookdata.dict()
+    # print("user email is ",current_user.email)
+    print("user email  isis ",current_user['email'])
+    
+    try:
+        user_age_instance= await userService.create(current_user['email'], users_collection)
+        userage=user_age_instance.age
+       
+        if userage<18:
+            print("if condition entered")
+            raise HTTPException(status_code=403, detail="User is underaged to create a book")
+        result=  books_collection.insert_one(bookrecord)
+
+        return {"message": "Book created successfully", "book": bookrecord, "created_by": current_user}
+
+    except Exception as e:
+        return e
+        pass    
