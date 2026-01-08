@@ -4,6 +4,7 @@ from .schemas import Book
 from .service import BookService
 from db import database
 from dependencies import RoleChecker
+from confsettings.aws import s3,bucket_name
 
 def get_books_collection():
     return database['books']
@@ -20,3 +21,29 @@ async def get_books(books_collection=Depends(get_books_collection),depends_role:
 async def get_book_by_id(book_id: str, books_collection=Depends(get_books_collection),depends_role: dict = Depends(RoleChecker(allowed_roles=["user", "admin"]))):
     book_record = await BookService.get_book_by_id(books_collection, book_id)
     return book_record
+
+
+@book_router.get("/export-books-csv/",status_code=status.HTTP_200_OK)
+async def export_books_csv(books_collection=Depends(get_books_collection),depends_role: dict = Depends(RoleChecker(allowed_roles=["admin"]))):
+    # 1. Fetch data from MongoDB
+    books = []
+    book_records=await BookService.get_all_books(books_collection)
+    # 2. Convert data to CSV format
+     # 2. Convert to CSV (in-memory)
+    import pandas as pd
+    from io import StringIO
+    df = pd.DataFrame(book_records)
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False)
+
+     # 3. Upload CSV to S3
+    file_name = "exported_bookdata.csv"
+
+    s3.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
+    s3_url = f"https://{bucket_name}.s3.amazonaws.com/{file_name}"
+
+     # 4. Return the S3 URL
+
+    return {"message": "CSV uploaded successfully", "file_url": s3_url}
+
+  

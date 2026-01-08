@@ -51,3 +51,61 @@ class rectangle(shape):
 c=rectangle(10,20)
 print(c)
 
+class A:
+    def __init__(self):
+        self.demo()
+        print("init of A")
+
+    def demo(self):
+        print("demo of A")  
+
+class B(A):
+    def __init__(self):
+        super().__init__()
+        print("init of B") 
+
+    # def demo(self):
+    #     print("demo of B")
+
+b=B()
+# b.demo()
+
+# two sum 
+
+marks=[12,20,24,28,30,32]
+
+target = 52
+pair=[]
+
+for i in range(len(marks)):
+    for j in range(i+1,len(marks)):
+        if marks[i] + marks[j] ==target :
+            pair.append([i,j])
+            
+print(pair)
+
+# now with using while loop
+
+a= 0 
+b= len(marks)-1
+
+while a < b:
+    current_sum = marks[a] + marks[b]
+    if current_sum == target:
+        pair.append([a,b])
+        a += 1
+        b -= 1
+    elif current_sum < target:
+        a += 1
+    else:
+        b -= 1 
+
+name=' shartah shet '
+
+print(' '.join(name.split()[::-1]))
+
+lastword="   fly me   to   the moon  "
+
+lastword=(lastword.split())
+
+print(len(lastword[-1]))

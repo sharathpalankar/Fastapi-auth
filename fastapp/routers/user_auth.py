@@ -1,14 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel
 from db import database
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm,HTTPBearer
 from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta, timezone
-from auth import verify_token, create_access_token
+from auth import verify_token, create_access_token, hash_password
 from books.schemas import BookCreateModel
 from dependencies import AccessTokenBearer,TokenBearer, RefreshTokenBearer,get_current_user,RoleChecker
 from exceptions.request_errors import UserAlreadyExists,RefreshTokenExpired, InvalidCredentials
 from .user_service import userService
+from core.httpx_client import get_httpx_client
+from external_services.weather import get_weather
+import httpx
+from redis.asyncio import Redis
+from fastapi_cache.decorator import cache
+from fastapi_cache import FastAPICache
 # Dependency to get the MongoDB collection
 
 REFRESH_TOKEN_EXPIRY = 2
@@ -23,6 +29,7 @@ class User(BaseModel):
     name: str
     email: str
     password: str
+    role: str 
 
 users_router = APIRouter()
 # Create a user
@@ -35,8 +42,10 @@ async def signup_user(user: User, collection=Depends(get_collection)):
         #raise HTTPException(status_code=400, detail="Email already registered")
 
     user.role = 'user'  # Default role
+    user.password = hash_password(user.password)
     # user['created_at'] = datetime.utcnow()
     # user['last_login'] = None
+    print(user.dict())
 
     result = await collection.insert_one(user.dict())
     return JSONResponse(content={"message": "User created successfully", "user_id": str(result.inserted_id)})
@@ -122,3 +131,26 @@ async def create_book(bookdata:BookCreateModel,books_collection=Depends(get_book
     except Exception as e:
         return e
         pass    
+
+from fastapi import Request
+
+def weather_cache_key_builder(
+    func,
+    namespace,
+    request: Request,
+    response,
+    args,
+    **kwargs,
+):
+    city_name = kwargs.get("city_name")
+    access_key = request.headers.get("access_key")
+    return f"{namespace}:weather:{city_name}:{access_key}"
+
+
+
+@users_router.get("/city/{city_name}")
+@cache(expire=300,key_builder=weather_cache_key_builder)
+async def get_weatherdetails_by_city(city_name: str,request: Request, apikey = Header(..., alias="access_key") ,client: httpx.AsyncClient = Depends(get_httpx_client)):
+    print("api key in header is true value ",apikey)
+    weatherdata = await get_weather(apikey,city_name,client)
+    return weatherdata

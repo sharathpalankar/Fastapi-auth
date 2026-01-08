@@ -1,10 +1,16 @@
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
+from passlib.context import CryptContext
+from confsettings.config import CONFIG
 
-SECRET_KEY = "your_secret_key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 10
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+SECRET_KEY = CONFIG.SECRET_KEY
+ALGORITHM = CONFIG.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = CONFIG.ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS = CONFIG.REFRESH_TOKEN_EXPIRE_DAYS
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
 def create_access_token(
     user_data: dict, expiry: timedelta =None, refresh: bool = False 

@@ -2,8 +2,9 @@ import motor
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 from fastapi import FastAPI,HTTPException,status
-
-MONGO_URI = "mongodb://localhost:27017"  # Use your MongoDB URI here
+from confsettings.config import CONFIG
+ 
+MONGO_URI = CONFIG.MONGO_URI # Use your MongoDB URI here
 
 # Creating the MongoDB client with connection pooling
 client = motor.motor_asyncio.AsyncIOMotorClient(

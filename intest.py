@@ -17,20 +17,25 @@
 # s=Son()
 # s.demo()
 
-# numbers=[5,2,8,13,10,20,22]
+numbers=[5,2,8,13,10,20,30,15,25,22]
 
-# max_sum = 0  # to store maximum sum
 
-# for i in range(len(numbers) - 2):
-#     total = 0
-#     # manually calculate sum of 3 consecutive numbers
-#     for j in range(3):
-#         total = total + numbers[i + j]
-#     # manually check if this is the largest so far
-#     if i == 0 or total > max_sum:
-#         max_sum = total
+max_sum = 0  # to store maximum sum
 
-# print("Maximum sum of 3 consecutive numbers:", max_sum)
+for i in range(len(numbers) - 2):
+    #find index of 3 max consecutive numbers
+    index = i 
+    total = 0
+    # manually calculate sum of 3 consecutive numbers
+    for j in range(3):
+        total = total + numbers[i + j]
+       
+    # manually check if this is the largest so far
+    if i == 0 or total > max_sum:
+        index =i 
+        max_sum = total
+
+print("Maximum sum of 3 consecutive numbers:", max_sum , "and index is",index) 
 
 
 a={"name":"sharu",
