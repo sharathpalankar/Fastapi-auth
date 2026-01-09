@@ -1,0 +1,31 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "book-app-fastapi" # Must be unique on PyPI if you publish it
+version = "0.1.0"
+authors = [
+  { name="Sharath Shet", email="appushet2@gmail.com" },
+]
+description = "A distributable FastAPI application."
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["fastapi", "web", "api"]
+license = { text = "MIT" }
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]", # Include the ASGI server for running the app
+]
+
+[project.urls]
+Homepage = "https://github.com/sharathpalankar/Fastapi-auth"
+
+# --- Define the Entry Point ---
+# This section is CRUCIAL for making it runnable as a package.
+[project.scripts]
+# This creates a command 'start-api' that executes the function
+# 'run_server' within the module 'your_app_name.cli'
+"start-api" = "fastapp.cli:run_server"
