@@ -181,7 +181,7 @@ async def webhook_fun(request:Request):
     print("payload receivued from webhook ", payload)
 
     return {"success":"payload Success to server",
-            "event":payload.get("title")}
+            "event":payload.get("url")}
 
 
 
