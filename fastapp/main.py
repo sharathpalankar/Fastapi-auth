@@ -1,4 +1,4 @@
-from fastapi import FastAPI,Header,HTTPException,Depends,Cookie,status,Request,Body
+from fastapi import FastAPI,Header,HTTPException,Depends,Cookie,status,Request,Body, WebSocket
 from fastapi.responses import JSONResponse
 from typing import Optional
 from pydantic import BaseModel
@@ -13,6 +13,8 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis  import RedisBackend
 import requests
 import redis.asyncio as redis 
+from websocket.redis_client import redis_client
+from websocket.notification_service import create_notification_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -183,8 +185,21 @@ async def webhook_fun(request:Request):
     return {"success":"payload Success to server",
             "event":payload.get("url")}
 
+@app.post("/notifications/")
+async def create_notification(request: Request):
+    data = await request.json()
+    result = create_notification_service(data)
+    return {"notification_id": 1 , "message": data["message"]}
 
 
+# ---------------- WEBSOCKET ----------------
+from websocket.main import ConnectionManager
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/notifications/")
+async def websocket_endpoint(websocket: WebSocket, message: str):
+    await manager.notification_message(websocket, message)
 
 # Create an item
 # @app.post("/items/", response_model=Item)
