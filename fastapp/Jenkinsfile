@@ -10,7 +10,7 @@ pipeline {
             }
         }
 
-        stage('Setup Python fastapi app') {
+        stage('Setup Python fastapi webapp') {
             steps {
                 sh '''
                 python3 --version
