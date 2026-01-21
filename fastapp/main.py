@@ -70,7 +70,7 @@ app.include_router(book_router, prefix="/api/v1", tags=["books_api"])
 @app.get("/")
 def read_root():
     print("webhook called")
-    return {"message": "Hello, FastAPI!"}
+    return {"message": "Hello, FastAPI world!"}
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
