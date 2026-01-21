@@ -14,7 +14,7 @@ async def redis_subscriber():
         async for message in pubsub.listen():
             if message['type'] == 'message':
                 data = message['data']
-                print("Received message from Redis:", data)
+                print("Received messages from Redis:", data)
                 await manager.broadcast(data)
     except asyncio.CancelledError:
         print("Redis subscriber task cancelled")
