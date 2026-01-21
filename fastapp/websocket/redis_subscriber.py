@@ -4,7 +4,6 @@ from websocket.main import ConnectionManager
 
 manager = ConnectionManager()
 
-
 async def redis_subscriber():
     pubsub = redis_client.pubsub()
     pubsub.subscribe('notifications')
