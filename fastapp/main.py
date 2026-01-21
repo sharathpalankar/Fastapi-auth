@@ -1,4 +1,4 @@
-from fastapi import FastAPI,Header,HTTPException,Depends,Cookie,status,Request,Body, WebSocket
+from fastapi import FastAPI,Header,HTTPException,Depends,Cookie,status,Request,Body, WebSocket,WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from typing import Optional
 from pydantic import BaseModel
@@ -11,21 +11,42 @@ from tasks import add_numbers
 from contextlib import asynccontextmanager
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis  import RedisBackend
-import requests
+import requests,asyncio
 import redis.asyncio as redis 
 from websocket.redis_client import redis_client
 from websocket.notification_service import create_notification_service
+from websocket.redis_subscriber import redis_subscriber as redis_listener
+
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # Startup code here
+#     print("code start up...")
+#     redis_client = redis.Redis(host='localhost', port=6379, db=0)
+#     # FastAPICache.init(RedisBackend(redis_client), prefix="fastapp_cache")
+#      # 🔥 START REDIS SUBSCRIBER
+#     redis_task = asyncio.create_task(redis_listener())
+#     try:
+#         yield
+#     finally:
+#         redis_task.cancel()
+#         await redis_task.close()
+#         # Shutdown code here
+#         print("code Shutting down...")
+#         await redis_client.close()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup code here
-    print("code start up...")
-    redis_client = redis.Redis(host='localhost', port=6379, db=0)
-    FastAPICache.init(RedisBackend(redis_client), prefix="fastapp_cache")
-    yield
-    # Shutdown code here
-    print("code Shutting down...")
-    await redis_client.close()
+    print("🚀 App startup")
+
+    # DO NOT create a new redis client here
+    redis_task = asyncio.create_task(redis_listener())
+
+    try:
+        yield
+    finally:
+        print(" App shutdown")
+        redis_task.cancel()
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -195,11 +216,20 @@ async def create_notification(request: Request):
 # ---------------- WEBSOCKET ----------------
 from websocket.main import ConnectionManager
 
+
 manager = ConnectionManager()
 
 @app.websocket("/ws/notifications/")
-async def websocket_endpoint(websocket: WebSocket, message: str):
-    await manager.notification_message(websocket, message)
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await manager.send_personal_message(f"You wrote: {data}", websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
 
 # Create an item
 # @app.post("/items/", response_model=Item)

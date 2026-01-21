@@ -20,20 +20,4 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(message)
 
-    async def notification_message(self,  websocket: WebSocket, message: str):
-        await websocket.accept()
-
-        pubsub = redis_client.pubsub()
-        pubsub.subscribe('notifications')
-
-        try:
-            while True:
-                message = pubsub.get_message()
-                if message and message['type'] == 'message':
-                    await websocket.send_text(message['data'])
-        except Exception as e:
-            print("WebSocket exception details:", e)
-        finally:
-            #await websocket.close()
-            pubsub.close()
         
