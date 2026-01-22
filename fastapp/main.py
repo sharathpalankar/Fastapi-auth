@@ -201,7 +201,7 @@ async def get_brands():
 @app.post("/webhook/n8n")
 async def webhook_fun(request:Request):
     payload = await request.json()
-    print("learning webhook integration with n8n")
+    print("learning webhook integration with jenkins pipeline trigger on code push ")
     print("payload receivued from webhook ", payload)
 
     return {"success":"payload Success to server",
