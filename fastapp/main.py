@@ -1,7 +1,7 @@
 from fastapi import FastAPI,Header,HTTPException,Depends,Cookie,status,Request,Body, WebSocket,WebSocketDisconnect
 from fastapi.responses import JSONResponse
-from typing import Optional
-from pydantic import BaseModel
+from typing import Any, Optional,Dict
+from pydantic import BaseModel, create_model
 from db import database
 from fastapi.security import OAuth2PasswordBearer
 from routers.user_auth import users_router as user_router
@@ -207,11 +207,19 @@ async def webhook_fun(request:Request):
     return {"success":"payload Success to server",
             "event":payload.get("url")}
 
+def create_dynamic_model(name: str, fields: dict[str, Any]) -> BaseModel:
+    return create_model(name, **fields)
+
+# Example Usage
+DynamicNotificationModel = create_dynamic_model('DynamicNotification', {'Message': (str, ...), 'type': (str, "general_notification")})
+
 @app.post("/notifications/")
-async def create_notification(request: Request):
-    data = await request.json()
-    result = create_notification_service(data)
-    return {"notification_id": 1 , "message": data["message"]}
+async def create_notification(request_body: Dict[str,Any]): 
+    data = DynamicNotificationModel(**request_body)
+    print("Notification Data:", data)
+    # data = await request.json()
+    # result = create_notification_service(data)
+    return {"notification_id": 1 , "message": data}
 
 
 # ---------------- WEBSOCKET ----------------
