@@ -1,4 +1,5 @@
 from fastapi import FastAPI,Header,HTTPException,Depends,Cookie,status,Request,Body, WebSocket,WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware  
 from fastapi.responses import JSONResponse
 from typing import Any, Optional,Dict
 from pydantic import BaseModel, create_model
@@ -49,6 +50,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.exception_handler(UserAlreadyExists)
 async def unicorn_exception_handler(request: Request, exc: UserAlreadyExists):
@@ -249,7 +258,7 @@ async def websocket_endpoint(websocket: WebSocket):
 #     return item_dict
 
 
-
+#https://github.com/Teja343/Transcription/blob/main/transcription/api/views.py
 
 # Create a user
 # @app.post("/users/")

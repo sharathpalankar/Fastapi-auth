@@ -35,6 +35,7 @@ users_router = APIRouter()
 # Create a user
 @users_router.post("/signup", status_code=201)
 async def signup_user(user: User, collection=Depends(get_collection)):
+    print("user data is ",user.dict())
     existing_user = await collection.find_one({"email": user.email})
     if existing_user:
         raise UserAlreadyExists
@@ -53,7 +54,7 @@ async def signup_user(user: User, collection=Depends(get_collection)):
 @users_router.post("/login")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), collection=Depends(get_collection)):
     user = await collection.find_one({"email": form_data.username, "password": form_data.password})
-    print(user)
+    print("info is ",user)
     if not user:
         raise InvalidCredentials
         raise HTTPException(status_code=400, detail="Incorrect email or password")
@@ -82,7 +83,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
                     "message": "Login successful",
                     "access_token": access_token,
                     "refresh_token": refresh_token,
-                    "user": {"email": user['email']},
+                    "user": {"email": user['email'], "role": user['role']},
+                    
                 }
             )
 #     user

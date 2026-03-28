@@ -109,3 +109,14 @@ lastword="   fly me   to   the moon  "
 lastword=(lastword.split())
 
 print(len(lastword[-1]))
+
+count_dict = {"key":10}
+
+print(count_dict.get('s',20)+1)
+
+print(count_dict.get("key1",20))
+
+
+print(count_dict["key"])
+
+print(count_dict)
