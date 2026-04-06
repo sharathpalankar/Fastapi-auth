@@ -232,18 +232,15 @@ async def create_notification(request_body: Dict[str,Any]):
 
 
 # ---------------- WEBSOCKET ----------------
-from websocket.main import ConnectionManager
+from websocket.main import manager
 
-
-manager = ConnectionManager()
 
 @app.websocket("/ws/notifications/")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            data = await websocket.receive_text()
-            await manager.send_personal_message(f"You wrote: {data}", websocket)
+            await asyncio.sleep(1)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 

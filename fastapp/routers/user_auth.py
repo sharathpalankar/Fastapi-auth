@@ -114,7 +114,11 @@ async def read_admin_data(current_user: dict = Security(get_current_user)):
 
 
 @users_router.post("/createBook")
-async def create_book(bookdata:BookCreateModel,books_collection=Depends(get_books_collection),users_collection=Depends(get_collection),current_user: dict = Depends(get_current_user)):
+async def create_book(bookdata:BookCreateModel,
+                      books_collection=Depends(get_books_collection),
+                      users_collection=Depends(get_collection),
+                      current_user: dict = Depends(get_current_user)
+                      ):
     bookrecord=bookdata.dict()
     # print("user email is ",current_user.email)
     print("user email  isis ",current_user['email'])
@@ -126,12 +130,14 @@ async def create_book(bookdata:BookCreateModel,books_collection=Depends(get_book
         if userage<18:
             print("if condition entered")
             raise HTTPException(status_code=403, detail="User is underaged to create a book")
+        
+        bookrecord['created_by']=current_user['email']
         result=  books_collection.insert_one(bookrecord)
 
         return {"message": "Book created successfully", "book": bookrecord, "created_by": current_user}
 
     except Exception as e:
-        return e
+        raise HTTPException(status_code=500, detail=str(e))
         pass    
 
 from fastapi import Request
