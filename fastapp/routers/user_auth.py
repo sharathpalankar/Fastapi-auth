@@ -35,6 +35,11 @@ class User(BaseModel):
     password: str
     role: str 
 
+class updateUser(BaseModel):
+    name: str = None
+    email:str = None
+    role:str
+
 users_router = APIRouter()
 # Create a user
 @users_router.post("/signup", status_code=201)
@@ -137,8 +142,51 @@ async def upload_profile_picture(file:UploadFile,
     return "still in development"
 
 @users_router.get("/users/me")
-async def read_users_me(current_user: dict = Depends(get_current_user),role_checker: str = Depends(RoleChecker(allowed_roles=["user", "admin"]))):
+async def read_users_me(current_user: dict = Depends(get_current_user),role_checker: str = Depends(RoleChecker(allowed_roles=["user", "admin","storeowner"]))):
     return current_user
+
+
+# current_user: dict = Depends(get_current_user), 
+#                          role_checker: str = Depends(RoleChecker(allowed_roles=["admin","user"])
+@users_router.get("/users")
+async def read_all_users(
+                           collection=Depends(get_collection)):
+    users = []
+    async for user in collection.find():
+        user['_id'] = str(user['_id'])  # Convert ObjectId to string
+        users.append(user)
+    return users
+
+@users_router.put("/update_userinfo")
+async def update_user_info(user: updateUser, 
+                           collection=Depends(get_collection),
+                               current_user: dict = Depends(get_current_user)
+                             ):
+    if current_user['email'] != user.email:
+        raise HTTPException(status_code=403, detail="You can only update your own information")
+    existing_user = await collection.find_one({"email": current_user['email']})
+    if not existing_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update_data = {k: v for k, v in user.dict().items() if v is not None}
+    if "password" in update_data:
+        update_data["password"] = hash_password(update_data["password"])
+
+    await collection.update_one({"email": current_user['email']}, {"$set": update_data})
+    return {"message": "User information updated successfully"}
+
+
+@users_router.delete("/delete_user")
+async def delete_user(
+    collection=Depends(get_collection),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user['email'] != current_user['email']:
+        raise HTTPException(status_code=403, detail="You can only delete your own account")
+    result = await collection.delete_one({"email": current_user['email']})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deleted successfully"}
 
 @users_router.get("/admin")
 async def read_admin_data(current_user: dict = Security(get_current_user)):

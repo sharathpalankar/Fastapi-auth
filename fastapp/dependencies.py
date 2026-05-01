@@ -5,6 +5,7 @@ from fastapi import Depends, Request,HTTPException,status
 from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 from exceptions.request_errors import UserAlreadyExists,RefreshTokenExpired, InvalidCredentials
+
 def get_collection():
     return database['users'] 
 
