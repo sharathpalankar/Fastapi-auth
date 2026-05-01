@@ -16,6 +16,7 @@ class BookCreateModel(BaseModel):
     page_count: int
     published_year: int
     language: str
+    
 
     @model_validator(mode='before')
     def validate_page_count(cls, values):

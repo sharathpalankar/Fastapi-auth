@@ -13,7 +13,7 @@ book=BookService()
 
 book_router =APIRouter()
 @book_router.get("/books/",status_code=status.HTTP_200_OK, response_model=List[Book])
-async def get_books(books_collection=Depends(get_books_collection),depends_role: dict = Depends(RoleChecker(allowed_roles=["user", "admin"]))):
+async def get_books(books_collection=Depends(get_books_collection),depends_role: dict = Depends(RoleChecker(allowed_roles=["user", "admin","storeowner"]))):
     book_records=await BookService.get_all_books(books_collection)
     return book_records
 

@@ -60,4 +60,17 @@ class parent:
 class smallparent:
     def __init__(self ,name):
         self.name=name
-        
+
+
+from pydantic import BaseModel
+
+class user(BaseModel):
+    name:str
+    age:int 
+
+
+u = user(name="sharu",age=24)
+print(u.name)
+
+print(u.model_dump())
+print(u.model_dump_json())

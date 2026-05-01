@@ -1,6 +1,6 @@
-from fastapi import FastAPI,Header,HTTPException,Depends,Cookie,status,Request,Body, WebSocket,WebSocketDisconnect
+from fastapi import FastAPI,Header,HTTPException,Depends,Cookie,status,Request,Body, WebSocket,WebSocketDisconnect,Response
 from fastapi.middleware.cors import CORSMiddleware  
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse,PlainTextResponse
 from typing import Any, Optional,Dict
 from pydantic import BaseModel, create_model
 from db import database
@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
         redis_task.cancel()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -80,6 +80,20 @@ app.include_router(book_router, prefix="/api/v1", tags=["books_api"])
 def read_root():
     print("webhook called")
     return {"message": "Hello, FastAPI world!"}
+
+
+@app.get("/response")
+async def custom_response(request: Request):
+    key=request.headers.get('accept')
+    print("key is ",key)
+    if "application/json" in key:
+         return JSONResponse(content={"message": "This is a custom json  response"})
+    #request_data = await request.json()
+    if "application/xml" in key:
+        xml_content = "<response><message>This is a custom XML response</message></response>"
+        return Response(content=xml_content, media_type="application/xml")
+    return PlainTextResponse(content="This is a custom plain text response", status_code=201)
+   
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
