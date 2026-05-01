@@ -13,5 +13,6 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra ="ignore"
     )
+    max_upload_size_bytes: int = 5 * 1024 * 1024
 
 CONFIG = Settings()

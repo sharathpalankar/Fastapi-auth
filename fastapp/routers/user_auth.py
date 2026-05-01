@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, UploadFile
 from pydantic import BaseModel
 from db import database
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm,HTTPBearer
 from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta, timezone
-from auth import verify_token, create_access_token, hash_password
+from auth import verify_token, create_access_token, hash_password, verify_password
 from books.schemas import BookCreateModel
 from dependencies import AccessTokenBearer,TokenBearer, RefreshTokenBearer,get_current_user,RoleChecker
 from exceptions.request_errors import UserAlreadyExists,RefreshTokenExpired, InvalidCredentials
@@ -15,6 +15,10 @@ import httpx
 from redis.asyncio import Redis
 from fastapi_cache.decorator import cache
 from fastapi_cache import FastAPICache
+from PIL import UnidentifiedImageError
+from starlette.concurrency import  run_in_threadpool
+from image_utils import delete_profile_image ,process_profile_image
+from confsettings.config import CONFIG
 # Dependency to get the MongoDB collection
 
 REFRESH_TOKEN_EXPIRY = 2
@@ -53,7 +57,10 @@ async def signup_user(user: User, collection=Depends(get_collection)):
 
 @users_router.post("/login")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), collection=Depends(get_collection)):
-    user = await collection.find_one({"email": form_data.username, "password": form_data.password})
+ 
+    user = await collection.find_one({"email": form_data.username})
+    hashed_password = verify_password(form_data.password,user["password"])
+    print(hashed_password)
     print("info is ",user)
     if not user:
         raise InvalidCredentials
@@ -101,6 +108,33 @@ async def refresh_access_token(token_details: str = Depends(RefreshTokenBearer()
     raise RefreshTokenExpired
 
 from fastapi import Security
+
+@users_router.put("/me/profilePicture")
+async def upload_profile_picture(file:UploadFile,
+                                 users_collection=Depends(get_collection),
+                                 current_user: dict = Depends(get_current_user)
+                                       ):
+    content = await file.read()
+
+    if len(content) > CONFIG.max_upload_size_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large. Maximum size is {CONFIG.max_upload_size_bytes // (1024 * 1024)}MB",
+        )
+    try:
+        new_filename = await run_in_threadpool(process_profile_image, content)
+    except UnidentifiedImageError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid image file. Please upload a valid image (JPEG, PNG, GIF, WebP).",
+        ) from err
+    
+    await users_collection.update_one(
+        {"email": current_user['email']},
+        {"$set": {"profile_picture": new_filename}}
+    )
+    
+    return "still in development"
 
 @users_router.get("/users/me")
 async def read_users_me(current_user: dict = Depends(get_current_user),role_checker: str = Depends(RoleChecker(allowed_roles=["user", "admin"]))):
